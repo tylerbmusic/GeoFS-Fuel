@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GeoFS Fuel
 // @version      0.0.6
-// @description  Adds fuel to GeoFS
+// @description  Adds fuel to GeoFS (Suggestion by many discord users)
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
 // @match        https://*.geo-fs.com/geofs.php*
