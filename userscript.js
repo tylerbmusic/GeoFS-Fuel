@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         GeoFS Fuel
-// @version      0.0.5
+// @version      0.0.6
 // @description  Adds fuel to GeoFS
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
@@ -39,12 +39,22 @@
         });
     }
     //Code to be executed once the addon menu code is loaded
-    function afterGMenu() {
+    async function afterGMenu() {
+        var isImperial = "false";
+        fetch('https://api.ipregistry.co/?key=tryout')
+            .then(response => response.json())
+            .then(data => {
+            const country = data.location.country.name;
+            console.log("Country:", country);
+            if (country == 'United States' || country == 'Liberia' || country == 'Myanmar') {
+                isImperial = "true";
+            }
+        });
         const m = new window.GMenu("Fuel", "fuel");
         m.addItem("Fuel low warning threshold %: ", "Threshold", "number", 0, "0.15", 'min=0 max=1 step=0.01');
         m.addItem("Refuel Amount (gal/liters): ", "Amount", "number", 0, "0", `min=0 max=${window.fuel.capacity}`);
         m.addItem("Refuel Time (minutes): ", "Time", "number", 0, "1", 'min=0 step=0.1');
-        m.addItem("Use metric system: ", "Metric", "checkbox", 0, "false");
+        m.addItem("Use metric system: ", "Metric", "checkbox", 0, isImperial);
         let f = function() {
             window.fuel.refuelAmount = Number(localStorage.getItem("fuelAmount"));
             window.fuel.refuelTime = Number(localStorage.getItem("fuelTime"));
@@ -145,7 +155,7 @@ window.fuelTick = function() {
 
         if (window.fuel.capacity > 0 && lowAlarm) {
             document.getElementById('flightDataDisplay10').innerHTML = `
-                <span style="background: 0 0; border: none; border-radius: 2px; color: #000; display: inline-block; padding: 0 8px;">FUEL LEFT: ${Math.round(window.fuel.left)}/${Math.round(window.fuel.capacity)} (${Math.round(100*(window.fuel.left/window.fuel.capacity))}%)</span>
+                <span style="background: 0 0; border: none; border-radius: 2px; color: #000; display: inline-block; padding: 0 8px;">FUEL LEFT: ${Math.round(window.fuel.left)}/${Math.round(window.fuel.capacity)} ${(localStorage.getItem("fuelMetric") == "true") ? 'L' : 'GAL'} (${Math.round(100*(window.fuel.left/window.fuel.capacity))}%)</span>
             `;
             document.getElementById('fuelHandle').style.transform = 'rotate(' + Math.round(((84*(window.fuel.left/window.fuel.capacity)-42)%360)*1000)/1000 + 'deg)';
 
