@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GeoFS Fuel
-// @version      0.0.6
-// @description  Adds fuel to GeoFS (Suggestion by many discord users)
+// @version      0.1
+// @description  Adds fuel to GeoFS (requested by many, made with some help from geofs_pilot)
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
 // @match        https://*.geo-fs.com/geofs.php*
@@ -22,6 +22,7 @@
         refuelTime: 1, //how long refueling should take, in minutes
         refuelPerSec: -1, //how much per second to refuel the aircraft to be able to fuel it in the given time
         nextTick: -1,
+        firstAudio: new Audio("https://tylerbmusic.github.io/GPWS-files_geofs/fuelNotify.wav"),
     };
     window.GAL_TO_LITERS = 3.78541;
 
@@ -40,21 +41,23 @@
     }
     //Code to be executed once the addon menu code is loaded
     async function afterGMenu() {
-        var isImperial = "false";
-        fetch('https://api.ipregistry.co/?key=tryout')
+        var isMetric = "true";
+        fetch('https://freeipapi.com/api/json')
             .then(response => response.json())
             .then(data => {
-            const country = data.location.country.name;
-            console.log("Country:", country);
-            if (country == 'United States' || country == 'Liberia' || country == 'Myanmar') {
-                isImperial = "true";
+            const country = data.countryCode;
+            console.log("Country Code:", country);
+            if (country == 'US' || country == 'LR' || country == 'MM') { //US=United States, LR=Liberia, MM=Myanmar
+                isMetric = "false";
             }
         });
+        console.log(isMetric);
         const m = new window.GMenu("Fuel", "fuel");
         m.addItem("Fuel low warning threshold %: ", "Threshold", "number", 0, "0.15", 'min=0 max=1 step=0.01');
         m.addItem("Refuel Amount (gal/liters): ", "Amount", "number", 0, "0", `min=0 max=${window.fuel.capacity}`);
         m.addItem("Refuel Time (minutes): ", "Time", "number", 0, "1", 'min=0 step=0.1');
-        m.addItem("Use metric system: ", "Metric", "checkbox", 0, isImperial);
+        m.addItem("Allow midair refueling: ", "AirRefuel", "checkbox", 0, "false");
+        m.addItem("Use metric system: ", "Metric", "checkbox", 0, isMetric);
         let f = function() {
             window.fuel.refuelAmount = Number(localStorage.getItem("fuelAmount"));
             window.fuel.refuelTime = Number(localStorage.getItem("fuelTime"));
@@ -74,7 +77,7 @@ function fWait() {
     if (window.geofs.cautiousWithTerrain == false && window.geofs.aircraft.instance && window.geofs.animation) {
         setTimeout(() => {
             window.fuelInit();
-        }, 1000);
+        }, 3000);
     } else {
         setTimeout(() => {
             fWait();
@@ -111,27 +114,24 @@ window.fuelInit = function() {
         flightDataElement.style.zIndex = '9999';
         document.body.appendChild(flightDataElement);
     }
-    var fuelGague = document.createElement('div');
-    fuelGague.style.position = 'fixed !important';
-    fuelGague.style.width = '100px';
-    fuelGague.style.height = '100px';
-    fuelGague.style.right = '85%';
-    fuelGague.style.bottom = '25%';
-    fuelGague.style.borderRadius = '50%';
-    fuelGague.className = "geofs-overlay geofs-textOverlay geofs-visible";
-    document.body.appendChild(fuelGague);
-    fuelGague.innerHTML = `<div id="fuelGague" style="background-image: url(https://tylerbmusic.github.io/GPWS-files_geofs/fuel_meter.png);width: 100px;height: 100px;background-size: 100%;position: absolute;top: 0;"></div>
-    <div id="fuelHandle" style="background-image: url(https://tylerbmusic.github.io/GPWS-files_geofs/fuel_handle.png);background-size: 100%;width: 100px;height: 100px;position: absolute;top: 0;transform-origin: 49px 67.5px;"></div>`;
-    setInterval(() => {
-        let a = fuelGague.className.split(" ");
-        if (window.instruments.visible && a[2] == "geofs-hidden") {
-            a[2] = "geofs-visible";
-            fuelGague.className = a.join(" ");
-        } else if (!window.instruments.visible && a[2] == "geofs-visible") {
-            a[2] = "geofs-hidden";
-            fuelGague.className = a.join(" ");
-        }
-    }, 50);
+    var afuelGauge = document.createElement('div');
+    afuelGauge.id = 'afuelGauge';
+    afuelGauge.style.width = '50px';
+    afuelGauge.style.height = '50px';
+    //afuelGauge.style.right = '-25px';
+    //afuelGauge.style.bottom = '160px';
+    //afuelGauge.style.position = 'absolute';
+    afuelGauge.style.borderRadius = '50%';
+    //afuelGauge.style.scale = '0.5';
+    afuelGauge.style.cursor = 'default !important';
+    afuelGauge.className = "geofs-inline-overlay geofs-textOverlay control-pad geofs-manipulator geofs-visible";
+    document.getElementsByClassName("geofs-pads-container")[0].prepend(afuelGauge);
+    afuelGauge.innerHTML = `<div id="fuelGauge" style="background-image: url(https://tylerbmusic.github.io/GPWS-files_geofs/fuel_meter.png);width: 50px;height: 50px;background-size: 100%;position: absolute;top: 0;"></div>
+    <div id="fuelHandle" style="background-image: url(https://tylerbmusic.github.io/GPWS-files_geofs/fuel_handle.png);background-size: 100%;width: 50px;height: 50px;position: absolute;top: 0;transform-origin: 24.5px 33.75px;"></div>`;
+    if (!localStorage.getItem("fuelFirstTime")) {
+        localStorage.setItem("fuelFirstTime", "false");
+        window.fuel.firstAudio.play();
+    }
 
     flightDataElement.innerHTML = `
                 <span style="background: 0 0; border: none; border-radius: 2px; color: #000; display: inline-block; padding: 0 8px;" id="fuelL">FUEL LEFT:  ${Math.round(100*(window.fuel.left/window.fuel.capacity))}%</span>
@@ -178,7 +178,7 @@ window.fuelTick = function() {
         }
 
         if (window.fuel.isRefueling) {
-            if ((Math.round(window.fuel.left*100)/100 != Math.round(window.fuel.refuelAmount*100)/100) && window.geofs.animation.values.groundContact && !window.geofs.aircraft.instance.engine.on && (window.geofs.animation.values.groundSpeed < 2)) {
+            if ((Math.round(window.fuel.left*100)/100 != Math.round(window.fuel.refuelAmount*100)/100) && ((window.geofs.animation.values.groundContact && !window.geofs.aircraft.instance.engine.on && (window.geofs.animation.values.groundSpeed < 2)) || localStorage.getItem("fuelAirRefuel") == 'true')) {
                 if (window.fuel.refuelPerSec > 0 && window.fuel.left >= window.fuel.refuelAmount) {
                     window.fuel.isRefueling = false;
                     console.log("Stopped refueling");
