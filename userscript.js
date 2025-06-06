@@ -1,12 +1,15 @@
 // ==UserScript==
 // @name         GeoFS Fuel
-// @version      0.1
+// @namespace    https://github.com/tylerbmusic/GeoFS-Fuel
+// @version      0.1.1
 // @description  Adds fuel to GeoFS (requested by many, made with some help from geofs_pilot)
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
 // @match        https://*.geo-fs.com/geofs.php*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=geo-fs.com
 // @grant        none
+// @downloadURL  https://github.com/tylerbmusic/GeoFS-Fuel/raw/refs/heads/main/userscript.js
+// @updateURL    https://github.com/tylerbmusic/GeoFS-Fuel/raw/refs/heads/main/userscript.js
 // ==/UserScript==
 
 (function() {
@@ -54,18 +57,18 @@
         console.log(isMetric);
         const m = new window.GMenu("Fuel", "fuel");
         m.addItem("Fuel low warning threshold %: ", "Threshold", "number", 0, "0.15", 'min=0 max=1 step=0.01');
-        m.addItem("Refuel Amount (gal/liters): ", "Amount", "number", 0, "0", `min=0 max=${window.fuel.capacity}`);
+        m.addItem("Refuel Amount (gal/liters): ", "Amount", "number", 0, "0", `min=0`);
         m.addItem("Refuel Time (minutes): ", "Time", "number", 0, "1", 'min=0 step=0.1');
         m.addItem("Allow midair refueling: ", "AirRefuel", "checkbox", 0, "false");
         m.addItem("Use metric system: ", "Metric", "checkbox", 0, isMetric);
-        let f = function() {
-            window.fuel.refuelAmount = Number(localStorage.getItem("fuelAmount"));
+        window.fuel.refuel = function() {
+            window.fuel.refuelAmount = Math.min(Number(localStorage.getItem("fuelAmount")), window.fuel.capacity);
             window.fuel.refuelTime = Number(localStorage.getItem("fuelTime"));
             window.fuel.refuelPerSec = (window.fuel.refuelAmount - window.fuel.left)/(window.fuel.refuelTime*60);
             window.fuel.isRefueling = true;
             console.log("Refueling...");
         };
-        m.addButton("REFUEL", f);
+        m.addButton("REFUEL", window.fuel.refuel, 'onclick="window.fuel.refuel()"');
         let a = document.getElementsByClassName("geofs-alarms-container")[0];
         a.innerHTML += `<div class="geofs-inline-overlay geofs-textOverlay control-pad-transparent orange-pad control-pad-dyn-label geofs-hidden" style="background-size: 100px 25px; margin-left: 0px; margin-bottom: 0px; z-index: 60; background-position: 0px 0px; width: 100px; height: 25px; transform-origin: 0px 25px; opacity: 1; transform: rotate(0deg);" id="lowfuel">LOW FUEL</div>`;
         fWait();
@@ -160,7 +163,7 @@ window.fuelTick = function() {
             document.getElementById('fuelHandle').style.transform = 'rotate(' + Math.round(((84*(window.fuel.left/window.fuel.capacity)-42)%360)*1000)/1000 + 'deg)';
 
             if (window.fuel.left > 0) {
-                window.fuel.left -= (window.geofs.aircraft.instance.engine.on && !window.geofs.isPaused()) ? (window.fuel.gph / 3600)*((1/1.1)*Math.abs(window.geofs.animation.values.smoothThrottle+0.1)) : 0;
+                window.fuel.left -= (window.geofs.aircraft.instance.engine.on && !window.geofs.isPaused() && window/*TODO*/) ? (window.fuel.gph / 3600)*((1/1.1)*Math.abs(window.geofs.animation.values.smoothThrottle+0.1)) : 0;
                 window.fuel.left -= (window.geofs.animation.values.smoothThrottle > 0.9 && window.geofs.aircraft.instance.engines[0].afterBurnerThrust && window.geofs.aircraft.instance.engine.on && !window.geofs.isPaused()) ? ((window.fuel.gph*2) / 3600)*((1/1.1)*Math.abs(window.geofs.animation.values.smoothThrottle+0.1)) : 0; //According to Google, afterburners burn up to 3 times more fuel than normal flight
 
                 let a = lowAlarm.className.split(" ");
@@ -181,9 +184,11 @@ window.fuelTick = function() {
             if ((Math.round(window.fuel.left*100)/100 != Math.round(window.fuel.refuelAmount*100)/100) && ((window.geofs.animation.values.groundContact && !window.geofs.aircraft.instance.engine.on && (window.geofs.animation.values.groundSpeed < 2)) || localStorage.getItem("fuelAirRefuel") == 'true')) {
                 if (window.fuel.refuelPerSec > 0 && window.fuel.left >= window.fuel.refuelAmount) {
                     window.fuel.isRefueling = false;
+                    window.fuel.left = window.fuel.refuelAmount; //Sometimes the fuel overfills lol
                     console.log("Stopped refueling");
                 } else if (window.fuel.refuelPerSec < 0 && window.fuel.left <= window.fuel.refuelAmount) {
                     window.fuel.isRefueling = false;
+                    window.fuel.left = window.fuel.refuelAmount; //Sometimes the fuel overfills lol
                     console.log("Stopped defueling");
                 }
                 window.fuel.left += window.fuel.refuelPerSec;
@@ -276,6 +281,9 @@ window.fuel.getStats = function(id) {
             break;
         case 27:
             ret = [1000,2060];
+            break;
+        case 28:
+            ret = [27, 116];
             break;
         case 31:
             ret = [17,422];
