@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GeoFS Fuel
 // @namespace    https://github.com/tylerbmusic/GeoFS-Fuel
-// @version      0.1.1
+// @version      0.1.2
 // @description  Adds fuel to GeoFS (requested by many, made with some help from geofs_pilot)
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
@@ -41,7 +41,7 @@
             .then(() => {
             setTimeout(afterGMenu, 100);
         });
-    }
+    } else afterGMenu()
     //Code to be executed once the addon menu code is loaded
     async function afterGMenu() {
         var isMetric = "true";
