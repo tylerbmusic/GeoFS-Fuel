@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GeoFS Fuel
 // @namespace    https://github.com/tylerbmusic/GeoFS-Fuel
-// @version      0.1.2
+// @version      0.1.3
 // @description  Adds fuel to GeoFS (requested by many, made with some help from geofs_pilot)
 // @author       GGamerGGuy
 // @match        https://www.geo-fs.com/geofs.php?v=*
