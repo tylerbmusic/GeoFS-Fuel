@@ -142,6 +142,9 @@ window.fuelInit = function() {
 }
 //A function to be run every second
 window.fuelTick = function() {
+    const FUEL_DENSITY = 300; // Denisty of ATF Fuel in kg/m^3
+    const GRAVITY = 9.81; // in m/s^2
+
     if (localStorage.getItem("fuelEnabled") == "true" && (Date.now() >= window.fuel.nextTick)) {
         window.fuel.nextTick += 1000;
 
@@ -165,7 +168,10 @@ window.fuelTick = function() {
             if (window.fuel.left > 0) {
                 window.fuel.left -= (window.geofs.aircraft.instance.engine.on && !window.geofs.isPaused() && window/*TODO*/) ? (window.fuel.gph / 3600)*((1/1.1)*Math.abs(window.geofs.animation.values.smoothThrottle+0.1)) : 0;
                 window.fuel.left -= (window.geofs.animation.values.smoothThrottle > 0.9 && window.geofs.aircraft.instance.engines[0].afterBurnerThrust && window.geofs.aircraft.instance.engine.on && !window.geofs.isPaused()) ? ((window.fuel.gph*2) / 3600)*((1/1.1)*Math.abs(window.geofs.animation.values.smoothThrottle+0.1)) : 0; //According to Google, afterburners burn up to 3 times more fuel than normal flight
-
+                
+                // Sub routine to change Aircraft weight according to fuel left
+                window.geofs.aircraft.instance.rigidBody.gravityForce[2] = -(window.geofs.aircraft.instance.rigidBody.mass * GRAVITY + window.fuel.left * (FUEL_DENSITY / 1000) * GRAVITY);
+                
                 let a = lowAlarm.className.split(" ");
                 if ((window.fuel.left / window.fuel.capacity <= Number(localStorage.getItem("fuelThreshold"))) && a[5] == "geofs-hidden") {
                     a[5] = "geofs-visible";
